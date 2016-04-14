@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 	"text/template"
 )
 
@@ -23,6 +24,7 @@ type {{.Name}} string
 `
 	complexTypeTemplate = `package {{.PackageName}}
 
+// {{replace .Definition "\n" "\n\t// " -1}}
 type {{.Name}} struct {
 {{range .MessageElement}}
 	{{.Declaration}}
@@ -39,11 +41,14 @@ var (
 )
 
 func init() {
+	funcMap := template.FuncMap{
+		"replace": strings.Replace,
+	}
 	var err error
-	if simpleType, err = template.New("simpleType").Parse(simpleTypeTemplate); err != nil {
+	if simpleType, err = template.New("simpleType").Funcs(funcMap).Parse(simpleTypeTemplate); err != nil {
 		log.Fatalf("could not compile simpleTypeTemplate - %s", err.Error())
 	}
-	if complexType, err = template.New("complexType").Parse(complexTypeTemplate); err != nil {
+	if complexType, err = template.New("complexType").Funcs(funcMap).Parse(complexTypeTemplate); err != nil {
 		log.Fatalf("could not compile complexTypeTemplate - %s", err.Error())
 	}
 }
