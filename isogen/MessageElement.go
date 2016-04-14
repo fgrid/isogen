@@ -37,44 +37,68 @@ func (m *MessageElement) Declaration() string {
 		m.Name, m.ArrayDeclaration(), m.MemberType(), m.XMLTag, m.optional())
 }
 
+type context struct {
+	Receiver     string
+	ReceiverType string
+	Element      string
+	ElementType  string
+}
+
 func (m *MessageElement) Access(receiverType string) string {
-	c := struct {
-		Receiver     string
-		ReceiverType string
-		Element      string
-		ElementType  string
-	}{
+	c := &context{
 		Receiver:     strings.ToLower(receiverType[:1]),
 		ReceiverType: receiverType,
 		Element:      m.Name,
 	}
 	if len(m.Type) > 0 {
 		c.ElementType = typeMap[m.Type].Name
-		return fmt.Sprintf("func (%s *%s) Add%s() *%s {\n\t%s.%s = new(%s)\n\treturn %s.%s\n}\n",
-			c.Receiver, c.ReceiverType, c.Element, c.ElementType,
-			c.Receiver, c.Element, c.ElementType,
-			c.Receiver, c.Element)
+		if m.IsArray() {
+			return complexArrayAccess(c)
+		}
+		return complexAccess(c)
 	}
 	if len(m.ComplexType) > 0 {
 		c.ElementType = typeMap[m.ComplexType].Name
-		return fmt.Sprintf("func (%s *%s) Add%s() *%s {\n\t%s.%s = new(%s)\n\treturn %s.%s\n}\n",
-			c.Receiver, c.ReceiverType, c.Element, c.ElementType,
-			c.Receiver, c.Element, c.ElementType,
-			c.Receiver, c.Element)
+		if m.IsArray() {
+			return complexArrayAccess(c)
+		}
+		return complexAccess(c)
 	}
 	if len(m.SimpleType) > 0 {
 		c.ElementType = typeMap[m.SimpleType].Name
 		if m.IsArray() {
-			return fmt.Sprintf("func (%s *%s) Add%s(value string) {\n\t%s.%s = append(%s.%s, (*%s)(&value))\n}\n",
-				c.Receiver, c.ReceiverType, c.Element,
-				c.Receiver, c.Element, c.Receiver, c.Element, c.ElementType)
+			return simpleArrayAccess(c)
 		}
-		return fmt.Sprintf("func (%s *%s) Set%s(value string) {\n\t%s.%s = (*%s)(&value)\n}\n",
-			c.Receiver, c.ReceiverType, c.Element,
-			c.Receiver, c.Element, c.ElementType)
+		return simpleAccess(c)
 	}
 	log.Fatalf("message element with undefined type: %+v", m)
 	return ""
+}
+
+func complexArrayAccess(c *context) string {
+	return fmt.Sprintf("func (%s *%s) Add%s() *%s {\n\tnewValue := new(%s)\n\t%s.%s = append(%s.%s, newValue)\n\treturn newValue\n}\n",
+		c.Receiver, c.ReceiverType, c.Element, c.ElementType,
+		c.ElementType,
+		c.Receiver, c.Element, c.Receiver, c.Element)
+}
+
+func complexAccess(c *context) string {
+	return fmt.Sprintf("func (%s *%s) Add%s() *%s {\n\t%s.%s = new(%s)\n\treturn %s.%s\n}\n",
+		c.Receiver, c.ReceiverType, c.Element, c.ElementType,
+		c.Receiver, c.Element, c.ElementType,
+		c.Receiver, c.Element)
+}
+
+func simpleArrayAccess(c *context) string {
+	return fmt.Sprintf("func (%s *%s) Add%s(value string) {\n\t%s.%s = append(%s.%s, (*%s)(&value))\n}\n",
+		c.Receiver, c.ReceiverType, c.Element,
+		c.Receiver, c.Element, c.Receiver, c.Element, c.ElementType)
+}
+
+func simpleAccess(c *context) string {
+	return fmt.Sprintf("func (%s *%s) Set%s(value string) {\n\t%s.%s = (*%s)(&value)\n}\n",
+		c.Receiver, c.ReceiverType, c.Element,
+		c.Receiver, c.Element, c.ElementType)
 }
 
 func (m *MessageElement) optional() string {
