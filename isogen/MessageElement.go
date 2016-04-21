@@ -38,10 +38,11 @@ func (m *MessageElement) Declaration() string {
 }
 
 type context struct {
-	Receiver     string
-	ReceiverType string
-	Element      string
-	ElementType  string
+	Receiver       string
+	ReceiverType   string
+	Element        string
+	ElementType    string
+	ElementXSIType string
 }
 
 func (m *MessageElement) Access(receiverType string) string {
@@ -52,6 +53,7 @@ func (m *MessageElement) Access(receiverType string) string {
 	}
 	if len(m.Type) > 0 {
 		c.ElementType = typeMap[m.Type].Name
+		c.ElementXSIType = typeMap[m.Type].XSIType
 		if m.IsArray() {
 			return complexArrayAccess(c)
 		}
@@ -59,6 +61,7 @@ func (m *MessageElement) Access(receiverType string) string {
 	}
 	if len(m.ComplexType) > 0 {
 		c.ElementType = typeMap[m.ComplexType].Name
+		c.ElementXSIType = typeMap[m.ComplexType].XSIType
 		if m.IsArray() {
 			return complexArrayAccess(c)
 		}
@@ -66,6 +69,7 @@ func (m *MessageElement) Access(receiverType string) string {
 	}
 	if len(m.SimpleType) > 0 {
 		c.ElementType = typeMap[m.SimpleType].Name
+		c.ElementXSIType = typeMap[m.SimpleType].XSIType
 		if m.IsArray() {
 			return simpleArrayAccess(c)
 		}
@@ -90,15 +94,21 @@ func complexAccess(c *context) string {
 }
 
 func simpleArrayAccess(c *context) string {
+	if c.ElementXSIType == "iso20022:Amount" {
+		return fmt.Sprintf("func (%s *%s) Add%s(value, currency string) {\n\t%s.%s = append(%s.%s, New%s(value, currency))\n}\n",
+			c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.Receiver, c.Element, c.ElementType)
+	}
 	return fmt.Sprintf("func (%s *%s) Add%s(value string) {\n\t%s.%s = append(%s.%s, (*%s)(&value))\n}\n",
-		c.Receiver, c.ReceiverType, c.Element,
-		c.Receiver, c.Element, c.Receiver, c.Element, c.ElementType)
+		c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.Receiver, c.Element, c.ElementType)
 }
 
 func simpleAccess(c *context) string {
+	if c.ElementXSIType == "iso20022:Amount" {
+		return fmt.Sprintf("func (%s *%s) Set%s(value, currency string) {\n\t%s.%s = New%s(value, currency)\n}\n",
+			c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.ElementType)
+	}
 	return fmt.Sprintf("func (%s *%s) Set%s(value string) {\n\t%s.%s = (*%s)(&value)\n}\n",
-		c.Receiver, c.ReceiverType, c.Element,
-		c.Receiver, c.Element, c.ElementType)
+		c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.ElementType)
 }
 
 func (m *MessageElement) optional() string {
