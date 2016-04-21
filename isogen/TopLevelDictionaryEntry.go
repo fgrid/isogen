@@ -38,7 +38,7 @@ type {{.Name}} struct {
 // {{ replace .Definition "\n" "\n\t// " -1}}
 type {{.Name}} struct {
 	Value string ` + "`" + `xml:",chardata"` + "`" + `
-	Currency string ` + "`" + `xml:"Ccy"` + "`" + `
+	Currency string ` + "`" + `xml:"Ccy,attr"` + "`" + `
 }
 
 func New{{.Name}} (value, currency string) *{{.Name}} {
