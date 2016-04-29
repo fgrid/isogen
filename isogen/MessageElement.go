@@ -37,6 +37,13 @@ func (m *MessageElement) Declaration() string {
 		m.Name, m.ArrayDeclaration(), m.MemberType(), m.XMLTag, m.optional())
 }
 
+func (m *MessageElement) DeclarationOut() string {
+	return fmt.Sprintf(
+		"// %s\n\t%s %s*iso20022.%s `xml:\"%s%s\"`",
+		strings.Replace(m.Definition, "\n", "\n\t// ", -1),
+		m.Name, m.ArrayDeclaration(), m.MemberType(), m.XMLTag, m.optional())
+}
+
 type context struct {
 	Receiver       string
 	ReceiverType   string
@@ -69,6 +76,40 @@ func (m *MessageElement) Access(receiverType string) string {
 	}
 	if len(m.SimpleType) > 0 {
 		c.ElementType = typeMap[m.SimpleType].Name
+		c.ElementXSIType = typeMap[m.SimpleType].XSIType
+		if m.IsArray() {
+			return simpleArrayAccess(c)
+		}
+		return simpleAccess(c)
+	}
+	log.Fatalf("message element with undefined type: %+v", m)
+	return ""
+}
+
+func (m *MessageElement) AccessOut(receiverType string) string {
+	c := &context{
+		Receiver:     strings.ToLower(receiverType[:1]),
+		ReceiverType: receiverType,
+		Element:      m.Name,
+	}
+	if len(m.Type) > 0 {
+		c.ElementType = "iso20022." + typeMap[m.Type].Name
+		c.ElementXSIType = typeMap[m.Type].XSIType
+		if m.IsArray() {
+			return complexArrayAccess(c)
+		}
+		return complexAccess(c)
+	}
+	if len(m.ComplexType) > 0 {
+		c.ElementType = "iso20022." + typeMap[m.ComplexType].Name
+		c.ElementXSIType = typeMap[m.ComplexType].XSIType
+		if m.IsArray() {
+			return complexArrayAccess(c)
+		}
+		return complexAccess(c)
+	}
+	if len(m.SimpleType) > 0 {
+		c.ElementType = "iso20022." + typeMap[m.SimpleType].Name
 		c.ElementXSIType = typeMap[m.SimpleType].XSIType
 		if m.IsArray() {
 			return simpleArrayAccess(c)

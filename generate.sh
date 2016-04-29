@@ -1,4 +1,4 @@
-echo -n "update fgrid/iso20022 ..."
+echo -n "update fgrid/iso20022 ... "
 go get -u github.com/fgrid/iso20022/...
 echo "done"
 
@@ -9,13 +9,21 @@ curl -s -O http://www.iso20022.org/documents/eRepositories/Metamodel/${VER}_ISO2
 unzip ${VER}_ISO20022_eRepository.zip
 echo "done"
 
-echo -n "generate code ... "
+echo "generate code ... "
 cat ${VER}_ISO20022_2013_eRepository.iso20022 | sed -e 's/xsi:type/xsitype/g' | isogen
-echo "done"
 
-echo -n "format code ... "
+echo -n "format code in iso20022 ... "
 gofmt -s -w *.go
 echo "done"
+
+export WD=`pwd`
+for area in `ls -d ????`
+do
+	echo -n "format code in $area ... "
+	cd $area && gofmt -s -w *.go 
+	echo "done"
+	cd $WD
+done
 
 echo -n "build ... "
 go build

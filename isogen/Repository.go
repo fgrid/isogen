@@ -1,6 +1,9 @@
 package main
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+	"log"
+)
 
 type Repository struct {
 	XMLName                  xml.Name                  `xml:"urn:iso:std:iso:20022:2013:ecore Repository"`
@@ -13,5 +16,7 @@ func (r *Repository) Analyse() {
 }
 
 func (r *Repository) Generate(packageName string) {
+	log.Printf("generate repository in package %s", packageName)
 	r.DataDictionary.Generate(packageName)
+	r.BusinessProcessCatalogue.Generate(packageName)
 }
