@@ -20,7 +20,7 @@ type MessageElement struct {
 }
 
 func (m *MessageElement) IsArray() bool {
-	return m.MaxOccurs != "" && m.MaxOccurs != "0" && m.MaxOccurs != "1"
+	return m.MaxOccurs == "" || (m.MaxOccurs != "0" && m.MaxOccurs != "1")
 }
 
 func (m *MessageElement) ArrayDeclaration() string {
