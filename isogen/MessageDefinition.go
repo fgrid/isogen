@@ -15,6 +15,8 @@ type MessageDefinition struct {
 	XMLTag                      string                      `xml:"xmlTag,attr"`
 	MessageBuildingBlock        []MessageElement            `xml:"messageBuildingBlock"`
 	MessageDefinitionIdentifier MessageDefinitionIdentifier `xml:"messageDefinitionIdentifier"`
+	BasePackagePath             string
+	BasePackageName             string
 }
 
 const _Template = `package {{.MessageDefinitionIdentifier.BusinessArea}}
@@ -22,7 +24,7 @@ const _Template = `package {{.MessageDefinitionIdentifier.BusinessArea}}
 import (
 	"encoding/xml"
 
-	"github.com/fgrid/iso20022"
+	"{{.BasePackagePath}}"
 )
 
 type {{.DocumentType}} struct {
@@ -38,11 +40,11 @@ func (d *{{.DocumentType}}) AddMessage() *{{.Name}} {
 // {{replace .Definition "\n" "\n// " -1}}
 type {{.Name}} struct {
 {{range .MessageBuildingBlock}}
-	{{.DeclarationOut}}
+	{{.DeclarationOut $.BasePackageName}}
 {{end}}
 }
 
-{{range .MessageBuildingBlock}}{{.AccessOut $.Name}}{{end}}
+{{range .MessageBuildingBlock}}{{.AccessOut $.BasePackageName $.Name}}{{end}}
 `
 
 var _tmpl *template.Template
@@ -62,7 +64,9 @@ func (md *MessageDefinition) Generate(packageName string) {
 		log.Printf("skipping amigous message definition %s", md.Name)
 		return
 	}
-	log.Printf("generating %s - %s", md.MessageDefinitionIdentifier, md.Name)
+	md.BasePackagePath = packageName
+	parts := strings.Split(packageName, "/")
+	md.BasePackageName = parts[len(parts)-1]
 	if err := os.MkdirAll(md.MessageDefinitionIdentifier.BusinessArea, 0770); err != nil {
 		log.Printf("could not create subdirectory %s - %s",
 			md.MessageDefinitionIdentifier.BusinessArea, err.Error())

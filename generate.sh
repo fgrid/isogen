@@ -4,22 +4,28 @@ echo "done"
 
 echo -n "download iso20022 e-repository ... "
 VER=20160321
-rm *.go 2>/dev/null
+rm -f *.go 2>/dev/null
 curl -s -O http://www.iso20022.org/documents/eRepositories/Metamodel/${VER}_ISO20022_eRepository.zip
 unzip ${VER}_ISO20022_eRepository.zip
 echo "done"
 
-echo "generate code ... "
-cat ${VER}_ISO20022_2013_eRepository.iso20022 | sed -e 's/xsi:type/xsitype/g' | isogen
+if [ -z $1 ]
+then
+	PACKAGE="github.com/fgrid/iso20022"
+else
+	PACKAGE=$1
+fi
+echo "generate code in $PACKAGE ... "
+cat ${VER}_ISO20022_2013_eRepository.iso20022 | sed -e 's/xsi:type/xsitype/g' | isogen -package="$PACKAGE"
 
-echo -n "format code in iso20022 ... "
+echo -n "format code in $PACKAGE ... "
 gofmt -s -w *.go
 echo "done"
 
 export WD=`pwd`
 for area in `ls -d ????`
 do
-	echo -n "format code in $area ... "
+	echo -n "format code in $PACKAGE/$area ... "
 	cd $area && gofmt -s -w *.go 
 	echo "done"
 	cd $WD

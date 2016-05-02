@@ -75,7 +75,8 @@ func (t *TopLevelDictionaryEntry) Analyse() {
 }
 
 func (t *TopLevelDictionaryEntry) Generate(packageName string) {
-	t.PackageName = packageName
+	parts := strings.Split(packageName, "/")
+	t.PackageName = parts[len(parts)-1]
 	switch t.XSIType {
 	case "iso20022:Binary", "iso20022:CodeSet",
 		"iso20022:Date", "iso20022:DateTime", "iso20022:ExternalSchema",
