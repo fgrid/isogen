@@ -15,6 +15,7 @@ type TopLevelDictionaryEntry struct {
 	Element        []*Element        `xml:"element"`
 	MessageElement []*MessageElement `xml:"messageElement"`
 	PackageName    string
+	used           bool
 }
 
 const (
@@ -72,6 +73,13 @@ func init() {
 
 func (t *TopLevelDictionaryEntry) Analyse() {
 	typeMap[t.XMIId] = t
+}
+
+func (t *TopLevelDictionaryEntry) Used() {
+	typeMap[t.XMIId].used = true
+	for _, me := range t.MessageElement {
+		me.Analyse()
+	}
 }
 
 func (t *TopLevelDictionaryEntry) Generate(packageName string) {

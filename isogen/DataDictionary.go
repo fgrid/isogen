@@ -11,7 +11,9 @@ func (d *DataDictionary) Analyse() {
 }
 
 func (d *DataDictionary) Generate(packageName string) {
-	for _, entry := range d.TopLevelDictionaryEntry {
-		entry.Generate(packageName)
+	for _, entry := range typeMap {
+		if entry.used {
+			entry.Generate(packageName)
+		}
 	}
 }

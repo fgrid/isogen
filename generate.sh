@@ -1,13 +1,26 @@
 echo -n "update fgrid/iso20022 ... "
-go get -u github.com/fgrid/iso20022/...
+#go get -u github.com/fgrid/iso20022/...
 echo "done"
 
 echo -n "download iso20022 e-repository ... "
 VER=20160321
 rm -f *.go 2>/dev/null
-curl -s -O http://www.iso20022.org/documents/eRepositories/Metamodel/${VER}_ISO20022_eRepository.zip
-unzip ${VER}_ISO20022_eRepository.zip
-echo "done"
+if [ -r ${VER}_ISO20022_eRepository.zip ]
+then
+	echo "already here"
+else
+	curl -s -O http://www.iso20022.org/documents/eRepositories/Metamodel/${VER}_ISO20022_eRepository.zip
+	echo done
+fi
+
+echo -n "unpack iso20022 e-repository ... "
+if [ -r ${VER}_ISO20022_2013_eRepository.iso20022 ]
+then
+	echo "alread done"
+else
+	unzip ${VER}_ISO20022_eRepository.zip >/dev/null
+	echo "done"
+fi
 
 if [ -z $1 ]
 then
@@ -15,8 +28,16 @@ then
 else
 	PACKAGE=$1
 fi
+
+if [ -z $2 ]
+then
+	echo "no message filter set"
+else
+	MESSAGE_OPTS="-message=$2"
+	echo "MESSAGE_OPTS=$MESSAGE_OPTS"
+fi
 echo "generate code in $PACKAGE ... "
-cat ${VER}_ISO20022_2013_eRepository.iso20022 | sed -e 's/xsi:type/xsitype/g' | isogen -package="$PACKAGE"
+cat ${VER}_ISO20022_2013_eRepository.iso20022 | sed -e 's/xsi:type/xsitype/g' | isogen -package="$PACKAGE" $MESSAGE_OPTS
 
 echo -n "format code in $PACKAGE ... "
 gofmt -s -w *.go
@@ -35,6 +56,6 @@ echo -n "build ... "
 go build
 echo "done"
 
-echo -n "cleanup ... "
-rm -f ${VER}*.iso20022 ${VER}*.zip
-echo "done"
+#echo -n "cleanup ... "
+#rm -f ${VER}*.iso20022 ${VER}*.zip
+#echo "done"

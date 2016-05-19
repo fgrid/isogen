@@ -7,11 +7,15 @@ import (
 	"os"
 )
 
-var typeMap TypeMap
-var destinationPackageName string
+var (
+	typeMap                TypeMap
+	destinationPackageName string
+	messageType            string
+)
 
 func init() {
 	flag.StringVar(&destinationPackageName, "package", "github.com/fgrid/iso20022", "base package name")
+	flag.StringVar(&messageType, "message", "", "message type for generation (empty = all)")
 }
 
 func main() {
@@ -22,5 +26,11 @@ func main() {
 		log.Fatalf("could not decode repository from stdin: %s", err.Error())
 	}
 	repo.Analyse()
-	repo.Generate(destinationPackageName)
+	if messageType == "" {
+		log.Printf("going to generate all")
+		repo.Generate(destinationPackageName)
+	} else {
+		log.Printf("going to generate %q", messageType)
+		repo.GenerateMessage(destinationPackageName, messageType)
+	}
 }

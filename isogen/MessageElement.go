@@ -172,3 +172,15 @@ func (m *MessageElement) MemberType() string {
 	log.Fatalf("message element with undefined type: %+v", m)
 	return ""
 }
+
+func (m *MessageElement) Analyse() {
+	if len(m.SimpleType) > 0 {
+		typeMap[m.SimpleType].Used()
+	}
+	if len(m.ComplexType) > 0 {
+		typeMap[m.ComplexType].Used()
+	}
+	if len(m.Type) > 0 {
+		typeMap[m.Type].Used()
+	}
+}

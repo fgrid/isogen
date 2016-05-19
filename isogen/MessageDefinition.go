@@ -13,7 +13,7 @@ type MessageDefinition struct {
 	Definition                  string                      `xml:"definition,attr"`
 	Name                        string                      `xml:"name,attr"`
 	XMLTag                      string                      `xml:"xmlTag,attr"`
-	MessageBuildingBlock        []MessageElement            `xml:"messageBuildingBlock"`
+	MessageBuildingBlock        []*MessageElement           `xml:"messageBuildingBlock"`
 	MessageDefinitionIdentifier MessageDefinitionIdentifier `xml:"messageDefinitionIdentifier"`
 	BasePackagePath             string
 	BasePackageName             string
@@ -56,6 +56,12 @@ func init() {
 	var err error
 	if _tmpl, err = template.New("complexType").Funcs(funcMap).Parse(_Template); err != nil {
 		log.Fatalf("could not compile template - %s", err.Error())
+	}
+}
+
+func (md *MessageDefinition) Analyse() {
+	for _, mbb := range md.MessageBuildingBlock {
+		mbb.Analyse()
 	}
 }
 

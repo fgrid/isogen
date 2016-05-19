@@ -16,6 +16,20 @@ func (t *TopLevelCatalogueEntry) Generate(packageName string) {
 		return
 	}
 	for _, md := range t.MessageDefinition {
+		md.Analyse()
 		md.Generate(packageName)
+	}
+}
+
+func (t *TopLevelCatalogueEntry) GenerateMessage(packageName, messageType string) {
+	t.PackageName = packageName
+	if t.XSIType != "iso20022:BusinessArea" {
+		return
+	}
+	for _, md := range t.MessageDefinition {
+		if md.MessageDefinitionIdentifier.String() == messageType {
+			md.Analyse()
+			md.Generate(packageName)
+		}
 	}
 }
