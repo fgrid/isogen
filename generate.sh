@@ -3,7 +3,7 @@ echo -n "update fgrid/iso20022 ... "
 echo "done"
 
 echo -n "download iso20022 e-repository ... "
-VER=20160321
+VER=20160603
 rm -f *.go 2>/dev/null
 if [ -r ${VER}_ISO20022_eRepository.zip ]
 then
