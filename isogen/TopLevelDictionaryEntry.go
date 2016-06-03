@@ -32,7 +32,7 @@ type {{.Name}} struct {
 {{end}}
 }
 
-{{range .MessageElement}}{{.Access $.Name}}{{end}}
+{{range .MessageElement}}{{.Access "" $.Name}}{{end}}
 `
 	amountTemplate = `package {{.PackageName}}
 

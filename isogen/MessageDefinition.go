@@ -44,7 +44,7 @@ type {{.Name}} struct {
 {{end}}
 }
 
-{{range .MessageBuildingBlock}}{{.AccessOut $.BasePackageName $.Name}}{{end}}
+{{range .MessageBuildingBlock}}{{.Access $.BasePackageName $.Name}}{{end}}
 `
 
 var _tmpl *template.Template

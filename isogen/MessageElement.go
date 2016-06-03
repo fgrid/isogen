@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -17,6 +16,19 @@ type MessageElement struct {
 	SimpleType  string `xml:"simpleType,attr"`
 	ComplexType string `xml:"complexType,attr"`
 	Type        string `xml:"type,attr"`
+}
+
+func (m *MessageElement) typeID() (typeID string, complex bool) {
+	if len(m.SimpleType) > 0 {
+		return m.SimpleType, false
+	}
+	if len(m.ComplexType) > 0 {
+		return m.ComplexType, true
+	}
+	if len(m.Type) > 0 {
+		return m.Type, true
+	}
+	panic(fmt.Sprintf("message element with undefined type: %+v", m))
 }
 
 func (m *MessageElement) IsArray() bool {
@@ -52,36 +64,26 @@ type context struct {
 	ElementXSIType string
 }
 
-func (m *MessageElement) Access(receiverType string) string {
-	return m.AccessOut("", receiverType)
-}
-
-func (m *MessageElement) AccessOut(basePackageName, receiverType string) string {
+func (m *MessageElement) Access(basePackageName, receiverType string) string {
 	c := &context{
 		Receiver:     strings.ToLower(receiverType[:1]),
 		ReceiverType: receiverType,
 		Element:      m.Name,
 	}
-	if len(m.Type) > 0 {
-		return m.buildComplexAccess(basePackageName, m.Type, c)
-	}
-	if len(m.ComplexType) > 0 {
-		return m.buildComplexAccess(basePackageName, m.ComplexType, c)
-	}
-	if len(m.SimpleType) > 0 {
-		return m.buildSimpleAccess(basePackageName, m.SimpleType, c)
-	}
-	log.Fatalf("message element with undefined type: %+v", m)
-	return ""
-}
-
-func (m *MessageElement) buildComplexAccess(basePackage, typeID string, c *context) string {
+	typeID, complex := m.typeID()
 	t := typeMap[typeID]
 	c.ElementXSIType = t.XSIType
 	c.ElementType = t.Name
-	if basePackage != "" {
-		c.ElementType = basePackage + "." + c.ElementType
+	if basePackageName != "" {
+		c.ElementType = basePackageName + "." + c.ElementType
 	}
+	if complex {
+		return m.buildComplexAccess(basePackageName, typeID, c)
+	}
+	return m.buildSimpleAccess(basePackageName, typeID, c)
+}
+
+func (m *MessageElement) buildComplexAccess(basePackage, typeID string, c *context) string {
 	if m.IsArray() {
 		return complexArrayAccess(c)
 	}
@@ -89,12 +91,6 @@ func (m *MessageElement) buildComplexAccess(basePackage, typeID string, c *conte
 }
 
 func (m *MessageElement) buildSimpleAccess(basePackage, typeID string, c *context) string {
-	t := typeMap[typeID]
-	c.ElementXSIType = t.XSIType
-	c.ElementType = t.Name
-	if basePackage != "" {
-		c.ElementType = basePackage + "." + c.ElementType
-	}
 	if m.IsArray() {
 		return simpleArrayAccess(c)
 	}
@@ -141,27 +137,11 @@ func (m *MessageElement) optional() string {
 }
 
 func (m *MessageElement) MemberType() string {
-	if len(m.SimpleType) > 0 {
-		return typeMap[m.SimpleType].Name
-	}
-	if len(m.ComplexType) > 0 {
-		return typeMap[m.ComplexType].Name
-	}
-	if len(m.Type) > 0 {
-		return typeMap[m.Type].Name
-	}
-	log.Fatalf("message element with undefined type: %+v", m)
-	return ""
+	typeID, _ := m.typeID()
+	return typeMap[typeID].Name
 }
 
 func (m *MessageElement) Analyse() {
-	if len(m.SimpleType) > 0 {
-		typeMap[m.SimpleType].Used()
-	}
-	if len(m.ComplexType) > 0 {
-		typeMap[m.ComplexType].Used()
-	}
-	if len(m.Type) > 0 {
-		typeMap[m.Type].Used()
-	}
+	typeID, _ := m.typeID()
+	typeMap[typeID].Used()
 }
