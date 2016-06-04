@@ -1,9 +1,74 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"strings"
+	"text/template"
 )
+
+const (
+	complexAccessTemplate = `
+func ({{.Receiver}} *{{.ReceiverType}}) Add{{.Element}}() *{{.ElementType}} {
+	{{.Receiver}}.{{.Element}} = new({{.ElementType}})
+	return {{.Receiver}}.{{.Element}}
+}
+`
+	complexArrayAccessTemplate = `
+func ({{.Receiver}} *{{.ReceiverType}}) Add{{.Element}}() *{{.ElementType}} {
+	newValue := new ({{.ElementType}})
+	{{.Receiver}}.{{.Element}} = append({{.Receiver}}.{{.Element}}, newValue)
+	return newValue
+}
+`
+	simpleAccessTemplate = `
+func ({{.Receiver}} *{{.ReceiverType}}) Set{{.Element}}(value string) {
+	{{.Receiver}}.{{.Element}} = (*{{.ElementType}})(&value)
+}
+`
+	simpleArrayAccessTemplate = `
+func ({{.Receiver}} *{{.ReceiverType}}) Add{{.Element}}(value string) {
+	{{.Receiver}}.{{.Element}} = append({{.Receiver}}.{{.Element}}, (*{{.ElementType}})(&value))
+}
+`
+	amountAccessTemplate = `
+func ({{.Receiver}} *{{.ReceiverType}}) Set{{.Element}}(value, currency string) {
+	{{.Receiver}}.{{.Element}} = New{{.ElementType}}(value, currency)
+}
+`
+	amountArrayAccessTemplate = `
+func ({{.Receiver}} *{{.ReceiverType}}) Add{{.Element}}(value, currency string) {
+	{{.Receiver}}.{{.Element}} = append({{.Receiver}}.{{.Element}}, New{{.ElementType}}(value, currency))
+}
+`
+)
+
+var (
+	complexAccess      *template.Template
+	complexArrayAccess *template.Template
+	simpleAccess       *template.Template
+	simpleArrayAccess  *template.Template
+	amountAccess       *template.Template
+	amountArrayAccess  *template.Template
+)
+
+func init() {
+	complexAccess = prepareTemplate("complexAccess", complexAccessTemplate)
+	complexArrayAccess = prepareTemplate("complexArrayAccess", complexArrayAccessTemplate)
+	simpleAccess = prepareTemplate("simpleAccess", simpleAccessTemplate)
+	simpleArrayAccess = prepareTemplate("simpleArrayAccess", simpleArrayAccessTemplate)
+	amountAccess = prepareTemplate("amountAccess", amountAccessTemplate)
+	amountArrayAccess = prepareTemplate("amountArrayAccess", amountArrayAccessTemplate)
+}
+
+func prepareTemplate(name, body string) *template.Template {
+	tmpl, err := template.New(name).Parse(body)
+	if err != nil {
+		log.Fatalf("could not compile template %s - %s", name, err.Error())
+	}
+	return tmpl
+}
 
 type MessageElement struct {
 	XSIType     string `xml:"xsitype,attr"`
@@ -77,56 +142,33 @@ func (m *MessageElement) Access(basePackageName, receiverType string) string {
 	if basePackageName != "" {
 		c.ElementType = basePackageName + "." + c.ElementType
 	}
+	tmpl := chooseTemplate(complex, m.IsArray(), c.ElementXSIType == "iso20022:Amount")
+	return m.buildAccess(c, tmpl)
+}
+
+func chooseTemplate(complex, array, amount bool) *template.Template {
+	if complex && array {
+		return complexArrayAccess
+	}
 	if complex {
-		return m.buildComplexAccess(basePackageName, typeID, c)
+		return complexAccess
 	}
-	return m.buildSimpleAccess(basePackageName, typeID, c)
-}
-
-func (m *MessageElement) buildComplexAccess(basePackage, typeID string, c *context) string {
-	if m.IsArray() {
-		return complexArrayAccess(c)
+	if amount && array {
+		return amountArrayAccess
 	}
-	return complexAccess(c)
-}
-
-func (m *MessageElement) buildSimpleAccess(basePackage, typeID string, c *context) string {
-	if m.IsArray() {
-		return simpleArrayAccess(c)
+	if amount {
+		return amountAccess
 	}
-	return simpleAccess(c)
-}
-
-func complexArrayAccess(c *context) string {
-	return fmt.Sprintf("func (%s *%s) Add%s() *%s {\n\tnewValue := new(%s)\n\t%s.%s = append(%s.%s, newValue)\n\treturn newValue\n}\n",
-		c.Receiver, c.ReceiverType, c.Element, c.ElementType,
-		c.ElementType,
-		c.Receiver, c.Element, c.Receiver, c.Element)
-}
-
-func complexAccess(c *context) string {
-	return fmt.Sprintf("func (%s *%s) Add%s() *%s {\n\t%s.%s = new(%s)\n\treturn %s.%s\n}\n",
-		c.Receiver, c.ReceiverType, c.Element, c.ElementType,
-		c.Receiver, c.Element, c.ElementType,
-		c.Receiver, c.Element)
-}
-
-func simpleArrayAccess(c *context) string {
-	if c.ElementXSIType == "iso20022:Amount" {
-		return fmt.Sprintf("func (%s *%s) Add%s(value, currency string) {\n\t%s.%s = append(%s.%s, New%s(value, currency))\n}\n",
-			c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.Receiver, c.Element, c.ElementType)
+	if array {
+		return simpleArrayAccess
 	}
-	return fmt.Sprintf("func (%s *%s) Add%s(value string) {\n\t%s.%s = append(%s.%s, (*%s)(&value))\n}\n",
-		c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.Receiver, c.Element, c.ElementType)
+	return simpleAccess
 }
 
-func simpleAccess(c *context) string {
-	if c.ElementXSIType == "iso20022:Amount" {
-		return fmt.Sprintf("func (%s *%s) Set%s(value, currency string) {\n\t%s.%s = New%s(value, currency)\n}\n",
-			c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.ElementType)
-	}
-	return fmt.Sprintf("func (%s *%s) Set%s(value string) {\n\t%s.%s = (*%s)(&value)\n}\n",
-		c.Receiver, c.ReceiverType, c.Element, c.Receiver, c.Element, c.ElementType)
+func (m *MessageElement) buildAccess(c *context, tmpl *template.Template) string {
+	var buf bytes.Buffer
+	tmpl.Execute(&buf, c)
+	return buf.String()
 }
 
 func (m *MessageElement) optional() string {
