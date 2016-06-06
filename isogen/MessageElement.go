@@ -147,22 +147,20 @@ func (m *MessageElement) Access(basePackageName, receiverType string) string {
 }
 
 func chooseTemplate(complex, array, amount bool) *template.Template {
-	if complex && array {
-		return complexArrayAccess
-	}
 	if complex {
-		return complexAccess
-	}
-	if amount && array {
-		return amountArrayAccess
+		return choose(array, complexArrayAccess, complexAccess)
 	}
 	if amount {
-		return amountAccess
+		return choose(array, amountArrayAccess, amountAccess)
 	}
+	return choose(array, simpleArrayAccess, simpleAccess)
+}
+
+func choose(array bool, arrayTemplate, singleTemplate *template.Template) *template.Template {
 	if array {
-		return simpleArrayAccess
+		return arrayTemplate
 	}
-	return simpleAccess
+	return singleTemplate
 }
 
 func (m *MessageElement) buildAccess(c *context, tmpl *template.Template) string {
