@@ -90,7 +90,8 @@ func (t *TopLevelDictionaryEntry) Generate(packageName string) {
 		"iso20022:Date", "iso20022:DateTime", "iso20022:ExternalSchema",
 		"iso20022:IdentifierSet", "iso20022:Indicator", "iso20022:Quantity",
 		"iso20022:Rate", "iso20022:Text", "iso20022:Time",
-		"iso20022:UserDefined", "iso20022:Year", "iso20022:YearMonth":
+		"iso20022:UserDefined", "iso20022:Year", "iso20022:YearMonth",
+		"iso20022:SchemaType":
 		t.GenerateWithTemplate(simpleType)
 	case "iso20022:MessageComponent", "iso20022:ChoiceComponent":
 		t.GenerateWithTemplate(complexType)
