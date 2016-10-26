@@ -2,13 +2,13 @@ echo -n "update fgrid/isogen ... "
 go get -u github.com/fgrid/isogen
 echo "done"
 
-VER=20160603
+VER=20161025
 echo -n "download iso20022 e-repository-${VER} ... "
 if [ -r ${VER}_ISO20022_eRepository.zip ]
 then
 	echo "already here"
 else
-	curl -s -O http://www.iso20022.org/documents/eRepositories/Metamodel/${VER}_ISO20022_eRepository.zip
+	curl -s -O https://www.iso20022.org/sites/default/files/documents/eRepositories/Metamodel/${VER}_ISO20022_eRepository.zip
 	echo done
 fi
 
